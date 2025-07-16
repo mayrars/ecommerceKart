@@ -23,7 +23,7 @@ class RegistrationForm(forms.ModelForm):
             raise forms.ValidationError('Password Does Not Match')
         
     
-    def __init__(self, *args, **k wargs):
+    def __init__(self, *args, **kwargs):
         super(RegistrationForm, self).__init__(*args, **kwargs)
         self.fields['first_name'].widget.attrs['placeholder'] = 'Enter First Name'
         self.fields['last_name'].widget.attrs['placeholder'] = 'Enter Last Name'
