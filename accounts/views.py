@@ -63,8 +63,9 @@ def login(request):
         if user is not None:
             # Log the user in
             auth.login(request, user)
+            messages.success(request, 'You are now logged in')
             # Redirect the user to the home page
-            return redirect('home')
+            return redirect('dashboard')
         else:
             # If the user is not authenticated, display an error message
             messages.error(request, 'Invalid login credentials')
@@ -94,3 +95,29 @@ def activate(request, uidb64, token):
     else:
         messages.error(request, 'Invalid activation link')
         return redirect('register')
+
+
+@login_required(login_url='login')
+def dashboard(request):
+    return render(request, 'accounts/dashboard.html')
+
+def forgotPassword(request):
+    if request.method == 'POST':
+        email = request.POST['email']
+        if Account.objects.get(email=email).exists():
+            user = Account.objects.get(email__exact=email)
+            current_site= get_current_site(request)
+            mail_subject = 'Please activate your account'
+            message = render_to_string('accounts/account_verification_email.html', {
+                'user': user,
+                'domain': current_site.domain,
+                'uid': urlsafe_base64_encode(force_bytes(user.pk)),
+                'token': default_token_generator.make_token(user),
+            })
+            to_email = email
+            send_email =  EmailMessage(mail_subject, message, to=[to_email])
+            send_email.send()
+        else:
+            messages.error(request, 'Account does not exist')
+            return redirect('forgotPassword')
+    return render(request, 'accounts/forgotPassword.html')
