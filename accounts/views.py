@@ -47,7 +47,6 @@ def register(request):
     }
     return render(request, 'accounts/register.html', context)
 
-
 # Define a function called login that takes in a request as an argument
 def login(request):
     # Check if the request method is POST
@@ -104,20 +103,38 @@ def dashboard(request):
 def forgotPassword(request):
     if request.method == 'POST':
         email = request.POST['email']
-        if Account.objects.get(email=email).exists():
+        if Account.objects.filter(email=email).exists():
             user = Account.objects.get(email__exact=email)
             current_site= get_current_site(request)
-            mail_subject = 'Please activate your account'
-            message = render_to_string('accounts/account_verification_email.html', {
+            mail_subject = 'Reset your password'
+            message = render_to_string('accounts/reset_password_email.html', {
                 'user': user,
-                'domain': current_site.domain,
+                'domain': current_site,
                 'uid': urlsafe_base64_encode(force_bytes(user.pk)),
                 'token': default_token_generator.make_token(user),
             })
             to_email = email
             send_email =  EmailMessage(mail_subject, message, to=[to_email])
             send_email.send()
+
+            messages.success(request, 'Password reset email has been sent to your email address')
+            return redirect('login')
         else:
             messages.error(request, 'Account does not exist')
             return redirect('forgotPassword')
     return render(request, 'accounts/forgotPassword.html')
+
+def resetpassword_validate(request, uidb64, token):
+    try:
+        uid = urlsafe_base64_decode(uidb64).decode()
+        user = Account._default_manager.get(pk=uid)
+    except(TypeError, ValueError, OverflowError, Account.DoesNotExist):
+        user = None
+
+    if user is not None and default_token_generator.check_token(user, token):
+        request.session['uid'] = uid
+        messages.success(request, 'Please reset your password')
+        return redirect('resetPassword')
+    else:
+        messages.error(request, 'This link has expired')
+        return redirect('login')
